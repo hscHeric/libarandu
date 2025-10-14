@@ -1,6 +1,7 @@
 # Cria a biblioteca 'arandu'.
 add_library(arandu
     arandu.c
+    rng.c
 )
 
 # Define os diretórios de include para o alvo 'arandu'.

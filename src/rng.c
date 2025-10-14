@@ -1,5 +1,8 @@
+#include <arandu/common.h>
 #include <arandu/rng.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <time.h>
 
 static inline uint64_t rotl(const uint64_t x, int k) {
   return (x << k) | (x >> (64 - k));
@@ -13,6 +16,15 @@ uint64_t next_splitmix64(uint64_t *x) {
 }
 
 void seed(arandu_rng *rng, uint64_t seed) {
+  if (ARANDU_UNLIKELY(rng == NULL)) {
+    return;
+  }
+
+  if (seed == 0) {
+    srand((unsigned)time(NULL));
+    seed = ((uint64_t)time(NULL) << 32) ^ (uint64_t)rand();
+  }
+
   rng->seed = seed;
   uint64_t splitmix_state = seed;
 
