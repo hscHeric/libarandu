@@ -8,3 +8,5 @@ add_library(arandu
 target_include_directories(arandu PUBLIC
     ${PROJECT_SOURCE_DIR}/include
 )
+
+target_link_libraries(arandu PUBLIC m)

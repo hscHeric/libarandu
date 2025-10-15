@@ -1,8 +1,13 @@
 #include <arandu/common.h>
 #include <arandu/rng.h>
+#include <math.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <time.h>
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 static inline uint64_t rotl(const uint64_t x, int k) {
   return (x << k) | (x >> (64 - k));
@@ -102,7 +107,55 @@ void long_jump(arandu_rng *rng) {
   rng->state[3] = s3;
 }
 
-double next_double(arandu_rng *rng);
-double next_double_range(arandu_rng *rng, double min, double max);
-uint64_t next_u64_range(arandu_rng *rng, uint64_t min, uint64_t max);
-double next_normal(arandu_rng *rng);
+// Gera um double uniforme em [0, 1) com 53 bits de precisão.
+ARANDU_NODISCARD double next_double(arandu_rng *rng) {
+  // Usa os 53 bits mais significativos para preencher a mantissa
+  const uint64_t u = next_u64(rng);
+  return (u >> 11) * (1.0 / 9007199254740992.0); /* 2^53 */
+}
+
+/* Gera um double uniforme em [min, max).
+   Se min >= max, retorna min (não falha). */
+ARANDU_NODISCARD double next_double_range(arandu_rng *rng, double min,
+                                          double max) {
+  if (min >= max) {
+    return min;
+  }
+  const double u = next_double(rng); /* [0,1) */
+  return min + (max - min) * u;      /* [min,max) */
+}
+
+/* Gera um inteiro uniforme em [min, max) sem viés.
+   Se min >= max, retorna min. */
+ARANDU_NODISCARD uint64_t next_u64_range(arandu_rng *rng, uint64_t min,
+                                         uint64_t max) {
+  if (min >= max) {
+    return min;
+  }
+  const uint64_t range = max - min; /* > 0 */
+
+  const uint64_t threshold = -range % range;
+
+  for (;;) {
+    const uint64_t x = next_u64(rng);
+    if (x >= threshold) {
+      return min + (x % range);
+    }
+    /* caso contrário, repete */
+  }
+}
+
+/* Gera uma N(0,1) via Box–Muller (sem cache do segundo valor). */
+ARANDU_NODISCARD double next_normal(arandu_rng *rng) {
+  double u1;
+  do {
+    u1 = next_double(rng);
+  } while (u1 <= 0.0);
+
+  const double u2 = next_double(rng);
+
+  const double r = sqrt(-2.0 * log(u1));
+  const double theta = 2.0 * M_PI * u2;
+
+  return r * cos(theta);
+}
